@@ -12,6 +12,10 @@ class ST_crawler:
         self.targetDates = "consider a range of time for the future"
 
     def get_tweets(self, ticker):
+        """
+        calls the api for twits and adds them to the mongodb database
+        checks the twit id to make sure it is new.
+        """
         req_url = self.url.format(ticker)
         try:
             response = requests.get(req_url)
@@ -37,7 +41,8 @@ class ST_crawler:
                     "_id": s["id"],
                     "body": text,
                     "timestamp": s["created_at"],
-                    "label": label
+                    "label": label,
+                    "symbols": [sym["symbol"] for sym in s["symbols"]]
                 }
                 
                 twits.append(twit)
@@ -49,8 +54,12 @@ class ST_crawler:
         else:
             print("bad json response")
 
+    def crawl(self, ticker, wait=18):
+        while True:
+            self.get_tweets(ticker)
+            sleep(wait)
+
+
 if __name__ == "__main__":
     app = ST_crawler()
-    while True: 
-        app.get_tweets("msft")
-        sleep(18)
+    app.crawl("msft")
