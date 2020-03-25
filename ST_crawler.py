@@ -3,12 +3,12 @@ import json
 import os
 from pymongo import MongoClient
 from time import sleep
+from database import db
 
 class ST_crawler:
-    def __init__ (self, db_url="mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"):
+    def __init__ (self):
         self.url = "https://api.stocktwits.com/api/2/streams/symbol/{}.json"
-        self.client = MongoClient(db_url)
-        self.db = self.client.StockTwits
+        self.db = db
         self.targetDates = "consider a range of time for the future"
 
     def get_tweets(self, ticker):
