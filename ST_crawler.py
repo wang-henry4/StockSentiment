@@ -4,7 +4,7 @@ import os
 import datetime
 from pymongo import MongoClient
 from time import sleep
-from database import db
+from database import db, config
 
 class ST_crawler:
     def __init__ (self):
@@ -28,6 +28,7 @@ class ST_crawler:
             data = json.loads(response.text)
         except:
             print("json decode error!")
+            print(response.text)
     
         if data and data["response"]["status"] == 200:
             twits = []
@@ -71,4 +72,4 @@ class ST_crawler:
 
 if __name__ == "__main__":
     app = ST_crawler()
-    app.crawl("msft")
+    app.crawl(config["ticker"])
