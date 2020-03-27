@@ -1,2 +1,2 @@
-db_url: "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
+db_url: "localhost"#"mongodb://mongo:27017"
 ticker: "SPY" # Case sensitive!
