@@ -1,11 +1,26 @@
-import datetime
-
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
-from database import db, Ema_data
+from database import db
+from datetime import datetime
+
+class data_getter():
+    def __init__(self, max_size=1800):
+        self.max_size = max_size
+        self._data = self.populate()
+
+    def populate(self):
+        query = db.averages.find().sort("time", -1).limit(self.max_size)
+        return [(d["MovingAvg"], d["time"]) for d in query][::-1]
+        
+    def update(self):
+        self._data = self.populate()
+
+    @property
+    def data(self):
+        return list(zip(*self._data))
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -18,13 +33,13 @@ app.layout = html.Div(
         dcc.Graph(id='live-update-graph'),
         dcc.Interval(
             id='interval-component',
-            interval=5*1000, # in milliseconds
+            interval=120*1000, # in milliseconds
             n_intervals=0
         )
     ])
 )
 
-data = Ema_data()
+data = data_getter()
 
 @app.callback(Output('live-update-text', 'children'),
               [Input('interval-component', 'n_intervals')])
@@ -49,4 +64,4 @@ def update_graph_live(n):
     return fig
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, host='0.0.0.0')
