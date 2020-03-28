@@ -2,19 +2,19 @@ import requests
 import json
 import os
 import datetime
+from utils import get_loggers
 from pymongo import MongoClient
 from time import sleep
-from database import db, config
+from database import get_db, config
 from transformers import pipeline
-
 class ST_crawler:
     def __init__ (self):
         self.url = "https://api.stocktwits.com/api/2/streams/symbol/{}.json"
-        self.db = db
+        self.db = get_db()
         self.collection = self.db.twits
         self.targetDates = "consider a range of time for the future"
         self.nlp = pipeline("sentiment-analysis")
-
+        self.logger = get_loggers(__name__, "logs/crawler.log")
     def get_tweets(self, ticker):
         """
         calls the api for twits and adds them to the mongodb database
@@ -24,14 +24,15 @@ class ST_crawler:
         try:
             response = requests.get(req_url)
         except:
-            print("get request error!")
+            self.logger.error("get request error")
+            return
 
         try:
             data = json.loads(response.text)
         except:
-            print("json decode error!")
-            print(response.text)
-    
+            self.logger.error(f"json decode error: {response.text}")
+            return
+
         if data and data["response"]["status"] == 200:
             twits = []
             texts = []
@@ -59,11 +60,11 @@ class ST_crawler:
 
             if twits:
                 self.collection.insert_many(twits)
-                print(f"inserted {len(twits)} twits")
+                self.logger.info(f"inserted {len(twits)} twits")
         elif data["responce"]["status"] == 429:
-            raise Exception("Rate Limit Exceeded")
+            self.logger.warning("request limit exceeded")
         else:
-            print("bad json response")
+            self.logger.error("bad json response")
 
     def apply_nlp(self, text):
         prediction = list(self.nlp(text))[0]
