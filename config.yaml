@@ -1,2 +1,5 @@
 db_url: "localhost"#"mongodb://mongo:27017"
-ticker: "SPY" # Case sensitive!
+tickers: 
+    - "SPY"
+    - "AAPL"
+    - "TSLA"

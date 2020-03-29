@@ -3,16 +3,17 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
-from database import db
+from database import get_db
 from datetime import datetime
 
 class data_getter():
     def __init__(self, max_size=1800):
         self.max_size = max_size
         self._data = self.populate()
+        self.db = get_db()
 
     def populate(self):
-        query = db.averages.find().sort("time", -1).limit(self.max_size)
+        query = self.db.averages.find().sort("time", -1).limit(self.max_size)
         return [(d["MovingAvg"], d["time"]) for d in query][::-1]
         
     def update(self):
@@ -22,6 +23,7 @@ class data_getter():
     def data(self):
         return list(zip(*self._data))
 
+db = get_db()
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 

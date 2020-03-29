@@ -1,20 +1,31 @@
 import requests
 import json
 import os
-import datetime
+from datetime import datetime
 from utils import get_loggers
 from pymongo import MongoClient
 from time import sleep
 from database import get_db, config
 from transformers import pipeline
+from itertools import cycle
 class ST_crawler:
-    def __init__ (self):
+    def __init__ (self, tickers):
         self.url = "https://api.stocktwits.com/api/2/streams/symbol/{}.json"
         self.db = get_db()
+
+        # DB collection
         self.collection = self.db.twits
-        self.targetDates = "consider a range of time for the future"
+        self.targetDates = "consider a range of time for the future" # TODO: REMOVE?
+        
+        #BERT pipeline
         self.nlp = pipeline("sentiment-analysis")
+        
+        #Ticker generator
+        self.tickers = cycle(tickers)
+        
+        # Logger object
         self.logger = get_loggers(__name__, "logs/crawler.log")
+
     def get_tweets(self, ticker):
         """
         calls the api for twits and adds them to the mongodb database
@@ -24,18 +35,18 @@ class ST_crawler:
         try:
             response = requests.get(req_url)
         except:
-            self.logger.error("get request error")
+            self.logger.error(f"get request error: {response} \n time {datetime.utcnow()}")
             return
 
         try:
             data = json.loads(response.text)
         except:
-            self.logger.error(f"json decode error: {response.text}")
+            self.logger.error(f"json decode error: {response.text} \n time {datetime.utcnow()}")
             return
 
         if data and data["response"]["status"] == 200:
             twits = []
-            texts = []
+
             for s in data["messages"]:
                 if self.db.twits.find_one({"_id": s["id"]}):
                     # twit already exists
@@ -43,7 +54,6 @@ class ST_crawler:
                 # each individual message dict --- s is a dict=
                 text = s["body"]
                 text = text.replace("\n", " ").strip()
-                texts.append(text)
                 label = s["entities"]["sentiment"]["basic"] if s["entities"]["sentiment"] else ""
                 
                 pred_label, prob = self.apply_nlp(text)
@@ -60,7 +70,8 @@ class ST_crawler:
 
             if twits:
                 self.collection.insert_many(twits)
-                self.logger.info(f"inserted {len(twits)} twits")
+                self.logger.info(f"inserted {len(twits)} twits for ${ticker}")
+                
         elif data["responce"]["status"] == 429:
             self.logger.warning("request limit exceeded")
         else:
@@ -82,13 +93,14 @@ class ST_crawler:
         date = date.split("-")
         time = time.split(":")
         dt =[int(num) for num in date + time]
-        return datetime.datetime(*dt)
+        return datetime(*dt)
 
-    def crawl(self, ticker, wait=18):
+    def crawl(self, wait=18):
         while True:
+            ticker = next(self.tickers)
             self.get_tweets(ticker)
             sleep(wait)
 
 if __name__ == "__main__":
-    app = ST_crawler()
-    app.crawl(config["ticker"])
+    app = ST_crawler(config["tickers"])
+    app.crawl()

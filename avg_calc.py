@@ -1,17 +1,18 @@
 """
 Does the moving average calculation
 """
-from database import get_db
+from database import get_db, config
 from datetime import datetime, timedelta
 from time import sleep
 from utils import get_loggers
-
+from itertools import cycle
 class Avg_calc:
-    def __init__(self, window=30, increments=2):
+    def __init__(self, tickers, window=30, increments=2):
         self.window = timedelta(minutes=window)
         self.increments = increments
         self.logger = get_loggers(__name__, "logs/data.log")
         self.db = get_db()
+        self.tickers = cycle(tickers)
 
     def calc_now(self, ticker="SPY"):
         t =  self.round_time(datetime.utcnow())
@@ -32,6 +33,10 @@ class Avg_calc:
         return dt
 
     def update(self, time, ticker="SPY"):
+        """
+        calculates and updates the average between time - window and time
+        of the ticker.
+        """
         end = time
         start = time - self.window
         ratio = self.calc_avg(start, end, ticker)
@@ -40,7 +45,7 @@ class Avg_calc:
             "MovingAvg": ratio,
             "symbol": ticker
         }
-        res = self.db.averages.update({"time": end},
+        res = self.db.averages.update_one({"time": end},
             new_doc,
             upsert=True)
         msg = f"Moving Average: {ratio} recorded at {end}"
@@ -92,8 +97,8 @@ class Avg_calc:
     
     def run(self):
         while True:
-            self.calc_now()
+            self.calc_now(next(self.tickers))
             sleep(self.increments*60)
 
 if __name__ == "__main__":
-    Avg_calc().run()
+    Avg_calc(config["tickers"]).run()
