@@ -8,23 +8,46 @@ from utils import get_loggers
 from itertools import cycle
 class Avg_calc:
     def __init__(self, tickers, window=30, increments=2):
+        """
+        increments must be a factor of 60, so that it can 
+        split an hour into equal slots.
+        """
         self.window = timedelta(minutes=window)
         self.increments = increments
         self.logger = get_loggers(__name__, "logs/data.log")
         self.db = get_db()
-        self.tickers = cycle(tickers)
+        self.tickers = config["tickers"]
 
     def calc_now(self, ticker="SPY"):
+        """
+        calculates the average for the ticker for the currect time.
+        Takes all the twits in the window time frame, and records in 
+        database
+        """
         t =  self.round_time(datetime.utcnow())
         self.update(t, ticker)
 
-    def calc_past(self, ticker="SPY"):
-        latest = list(self.db.averages.find().sort("time", -1).limit(1))[0]["time"]
-        latest += self.increments
-        while latest <= self.round_time(datetime.utcnow()):
-            self.update(latest, ticker)
+    def calc_past(self, start=None, ticker="SPY"):
+        """
+        calculates all averages from the start time to now of the given
+        ticker. If start is None, it is set to be the lastest average
+        found in storage
+        """
+        collection = self.db.get_collection(f"averages.{ticker}")
+        if start is None:
+            start = list(collection.find().sort("time", -1).limit(1))[0]["time"]
+            start += self.increments
 
+        while start <= self.round_time(datetime.utcnow()):
+            self.update(start, ticker)
+            start += self.increments
+    
     def round_time(self, dt):
+        """
+        rounds the time to the nearest time increment.
+        Ex: if increment is 2 minutes, it will round the time
+            to the nearest product of 2.
+        """
         if dt.second >= 30:
             dt = dt + timedelta(minutes=1)
         dt = dt.replace(second=0, microsecond=0)
@@ -37,18 +60,18 @@ class Avg_calc:
         calculates and updates the average between time - window and time
         of the ticker.
         """
+        collection = self.db.get_collection(f"averages.{ticker}")
         end = time
         start = time - self.window
         ratio = self.calc_avg(start, end, ticker)
         new_doc = {
             "time": end,
-            "MovingAvg": ratio,
-            "symbol": ticker
+            "MovingAvg": ratio
         }
-        res = self.db.averages.update_one({"time": end},
-            new_doc,
-            upsert=True)
-        msg = f"Moving Average: {ratio} recorded at {end}"
+        res = collection.update({"time": end},
+                                {"$set": new_doc},
+                                upsert=True)
+        msg = f"Moving Average: {ratio:.3f} for ${ticker} recorded at {end:%Y-%m-%d %H:%M} UTC"
         if res["updatedExisting"]:
             msg += ", overwrote existing"
         self.logger.info(msg)
@@ -97,7 +120,8 @@ class Avg_calc:
     
     def run(self):
         while True:
-            self.calc_now(next(self.tickers))
+            for ticker in self.tickers:
+                self.calc_now(ticker)
             sleep(self.increments*60)
 
 if __name__ == "__main__":

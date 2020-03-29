@@ -71,7 +71,7 @@ class ST_crawler:
             if twits:
                 self.collection.insert_many(twits)
                 self.logger.info(f"inserted {len(twits)} twits for ${ticker}")
-                
+
         elif data["responce"]["status"] == 429:
             self.logger.warning("request limit exceeded")
         else:

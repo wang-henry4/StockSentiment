@@ -11,4 +11,4 @@ def get_loggers(name, log_file):
     logger.addHandler(c_handler)
     logger.addHandler(f_handler)
     return logger
-
+    
