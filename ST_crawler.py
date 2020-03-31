@@ -2,10 +2,10 @@ import requests
 import json
 import os
 from datetime import datetime
-from utils import get_loggers
+from utils.logging import get_loggers
 from pymongo import MongoClient
 from time import sleep
-from database import get_db, config
+from utils.database import get_db, config
 from transformers import pipeline
 from itertools import cycle
 class ST_crawler:
