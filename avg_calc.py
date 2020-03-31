@@ -1,10 +1,10 @@
 """
 Does the moving average calculation
 """
-from database import get_db, config
 from datetime import datetime, timedelta
 from time import sleep
-from utils import get_loggers
+from utils.logging import get_loggers
+from utils.database import get_db, config
 from itertools import cycle
 class Avg_calc:
     def __init__(self, tickers, window=30, increments=2):
