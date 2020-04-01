@@ -9,7 +9,7 @@ from utils.database import get_db, config
 from transformers import pipeline
 from itertools import cycle
 class ST_crawler:
-    def __init__ (self, tickers):
+    def __init__ (self, tickers, img_dir=None):
         self.url = "https://api.stocktwits.com/api/2/streams/symbol/{}.json"
         self.db = get_db()
 
@@ -24,6 +24,8 @@ class ST_crawler:
         
         # Logger object
         self.logger = get_loggers(__name__, "logs/crawler.log")
+
+        self.img_dir = img_dir
 
     def get_tweets(self, ticker):
         """
@@ -56,7 +58,7 @@ class ST_crawler:
                 label = s["entities"]["sentiment"]["basic"] if s["entities"]["sentiment"] else ""
                 imgurl = ""
                 if "chart" in s["entities"]:
-                    imgurl = s["entities"]["chart"]["original"]
+                    imgurl = s["entities"]["chart"]["large"]
                 imgflag = (imgurl != "")
                 
                 pred_label, prob = self.apply_nlp(text)
@@ -85,6 +87,22 @@ class ST_crawler:
             self.logger.warning("request limit exceeded")
         else:
             self.logger.error("bad json response")
+
+    def save_img(self, img_url, uid):
+        """
+        Given an image url, and unique id of twit,
+        saves the image with the uid as the name.
+        If url is empty or is a gif then it does nothing.
+        """
+        if not img_url or img_url[-3:] == "gif":
+            return "url empty or is gif"
+
+        response = requests.get(img_url)
+        if response.status_code == 200:
+            name = os.path.join(self.img_dir, img_url.split("/")[-1])
+            with open(name, "wb") as file:
+                file.write(response.content)
+            return "Write success"
 
     def apply_nlp(self, text):
         prediction = list(self.nlp(text))[0]
