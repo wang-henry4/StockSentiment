@@ -55,6 +55,10 @@ class ST_crawler:
                 text = s["body"]
                 text = text.replace("\n", " ").strip()
                 label = s["entities"]["sentiment"]["basic"] if s["entities"]["sentiment"] else ""
+                imgurl = ""
+                if "chart" in s["entities"]:
+                    imgurl = s["entities"]["chart"]["original"]
+                imgflag = (imgurl != "")
                 
                 pred_label, prob = self.apply_nlp(text)
                 twit = {
@@ -64,10 +68,14 @@ class ST_crawler:
                     "label": label,
                     "symbols": [sym["symbol"] for sym in s["symbols"]],
                     "prediction": pred_label,
-                    "probability": prob
+                    "probability": prob,
+                    "imgflag" : imgflag,
+                    "imgurl" : imgurl
                 }
+                if imgflag:
+                    print(imgurl)
                 twits.append(twit)
-
+                
             if twits:
                 self.collection.insert_many(twits)
                 self.logger.info(f"inserted {len(twits)} twits for ${ticker}")
