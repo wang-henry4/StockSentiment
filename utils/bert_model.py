@@ -1,6 +1,9 @@
+import json
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
+from torchvision.transforms import Compose
 from transformers import BertModel, BertTokenizer
 
 def clsPoolFunc(hiddenStates):
@@ -42,3 +45,52 @@ class BertFineTuned(nn.Module):
         x = self.dense(x)
         x = F.softmax(x, dim=1)
         return x
+
+class twitData(Dataset):
+    def __init__(self, json_path, transform=None):
+        with open(json_path, "r") as file:
+            self.data = list(file.readlines())
+        self.transform = transform
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        example = json.loads(self.data[idx])
+        sample = {"text": example["body"], "label": example["label"]}
+        
+        if self.transform:
+            sample = self.transform(sample)
+        return sample
+
+class tokenize:
+    def __init__(self, tokenizer, max_length):
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        
+    def __call__(self, sample):
+        text, label = sample["text"], sample["label"]
+        text = self.tokenizer.encode(text, 
+                                 max_length=self.max_length,
+                                 pad_to_max_length=True)
+        if label == "Bullish":
+            label = 1
+        else:
+            label = 0
+        return {"text": text, "label": label}
+    
+class toTensor:
+    def __call__(self, sample):
+        text = sample["text"]
+        label = sample["label"]
+        
+        
+        return {"text": torch.tensor(text),
+                "label": torch.tensor(label)}
+
+def get_dataset(json_path, max_length=128, token_vocab="bert-base-uncased"):
+    """
+    sets up the dataset object with tokenizer
+    """
+    tokenizer = BertTokenizer.from_pretrained(token_vocab)
+    data = twitData(json_path, transform=Compose([tokenize(tokenizer, max_length), toTensor()]))
+    return data
