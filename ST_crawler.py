@@ -15,7 +15,6 @@ class ST_crawler:
 
         # DB collection
         self.collection = self.db.twits
-        self.targetDates = "consider a range of time for the future" # TODO: REMOVE?
         
         #BERT pipeline
         self.nlp = pipeline("sentiment-analysis")
@@ -61,6 +60,8 @@ class ST_crawler:
                 imgflag = (imgurl != "")
                 
                 pred_label, prob = self.apply_nlp(text)
+                prob = "{:.4f}".format(prob)
+                #print(prob)
                 twit = {
                     "_id": s["id"],
                     "body": text,
@@ -72,8 +73,8 @@ class ST_crawler:
                     "imgflag" : imgflag,
                     "imgurl" : imgurl
                 }
-                if imgflag:
-                    print(imgurl)
+                #if imgflag:
+                #    print(imgurl)
                 twits.append(twit)
                 
             if twits:
