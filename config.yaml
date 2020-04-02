@@ -1,5 +1,7 @@
 db_url: "localhost"#"mongodb://mongo:27017"
+img_dir: "data/images"
 tickers: 
     - "SPY"
     - "AAPL"
     - "TSLA"
+

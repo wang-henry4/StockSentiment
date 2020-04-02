@@ -89,7 +89,7 @@ class toTensor:
 
 def get_dataset(json_path, max_length=128, token_vocab="bert-base-uncased"):
     """
-    sets up the dataset object with tokenizer
+    sets up the dataset object with tokenizer, TODO: figure out max_length
     """
     tokenizer = BertTokenizer.from_pretrained(token_vocab)
     data = twitData(json_path, transform=Compose([tokenize(tokenizer, max_length), toTensor()]))

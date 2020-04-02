@@ -53,31 +53,7 @@ class ST_crawler:
                     # twit already exists
                     continue
                 # each individual message dict --- s is a dict=
-                text = s["body"]
-                text = text.replace("\n", " ").strip()
-                label = s["entities"]["sentiment"]["basic"] if s["entities"]["sentiment"] else ""
-                imgurl = ""
-                if "chart" in s["entities"]:
-                    imgurl = s["entities"]["chart"]["large"]
-                imgflag = (imgurl != "")
-                
-                pred_label, prob = self.apply_nlp(text)
-                prob = "{:.4f}".format(prob)
-                #print(prob)
-                twit = {
-                    "_id": s["id"],
-                    "body": text,
-                    "timestamp": self.convert_date(s["created_at"]),
-                    "label": label,
-                    "symbols": [sym["symbol"] for sym in s["symbols"]],
-                    "prediction": pred_label,
-                    "probability": prob,
-                    "imgflag" : imgflag,
-                    "imgurl" : imgurl
-                }
-                #if imgflag:
-                #    print(imgurl)
-                twits.append(twit)
+                twits.append(self.process_message(s))
                 
             if twits:
                 self.collection.insert_many(twits)
@@ -88,18 +64,51 @@ class ST_crawler:
         else:
             self.logger.error("bad json response")
 
+    def process_message(self, msg):
+        """
+        processes a single twit json and returns the doc to be saved
+        """
+        text = msg["body"]
+        text = text.replace("\n", " ").strip()
+        label = msg["entities"]["sentiment"]["basic"] if msg["entities"]["sentiment"] else ""
+        imgurl = ""
+        if "chart" in msg["entities"]:
+            imgurl = msg["entities"]["chart"]["large"]
+            self.save_img(imgurl, msg["id"])
+        imgflag = (imgurl != "")
+        
+        pred_label, prob = self.apply_nlp(text)
+        prob = "{:.4f}".format(prob)
+        #print(prob)
+        twit = {
+            "_id": msg["id"],
+            "body": text,
+            "timestamp": self.convert_date(msg["created_at"]),
+            "label": label,
+            "symbols": [sym["symbol"] for sym in msg["symbols"]],
+            "prediction": pred_label,
+            "probability": prob,
+            "imgflag" : imgflag,
+            "imgurl" : imgurl
+        }
+        return twit
+
     def save_img(self, img_url, uid):
         """
         Given an image url, and unique id of twit,
         saves the image with the uid as the name.
         If url is empty or is a gif then it does nothing.
         """
+        if self.img_dir is None:
+            return "no directory specified for images"
+
         if not img_url or img_url[-3:] == "gif":
             return "url empty or is gif"
 
         response = requests.get(img_url)
         if response.status_code == 200:
-            name = os.path.join(self.img_dir, img_url.split("/")[-1])
+
+            name = os.path.join(self.img_dir, str(uid) + ".png")
             with open(name, "wb") as file:
                 file.write(response.content)
             return "Write success"
@@ -129,5 +138,5 @@ class ST_crawler:
             sleep(wait)
 
 if __name__ == "__main__":
-    app = ST_crawler(config["tickers"])
+    app = ST_crawler(config["tickers"], config["img_dir"])
     app.crawl()
