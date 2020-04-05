@@ -63,7 +63,7 @@ class Avg_calc:
         collection = self.db.get_collection(f"averages.{ticker}")
         end = time
         start = time - self.window
-        ratio = self.calc_avg(start, end, ticker)
+        ratio = self.calc_avg_sentiment(start, end, ticker)
         new_doc = {
             "time": end,
             "MovingAvg": ratio
@@ -76,7 +76,7 @@ class Avg_calc:
             msg += ", overwrote existing"
         self.logger.info(msg)
 
-    def calc_avg(self, start, end, ticker="SPY"):
+    def calc_avg_sentiment(self, start, end, ticker="SPY"):
         agg_query = [
                 {"$match": {"timestamp": {"$gte": start, "$lt": end}}},
                 {"$match": {"symbols": ticker}},
@@ -118,6 +118,61 @@ class Avg_calc:
         result = self.db.twits.aggregate(agg_query)
         return list(result)[0]["ratio"]
     
+    def calc_performance(self, start=None, end=None, ticker=None):
+        agg_query = []
+
+        # if start and end are provided will filter for time
+        if start and end:
+            agg_query.append({"$match": {"timestamp": {"$gte": start, "$lt": end}}})
+        elif (start is None) and (end is None):
+            pass
+        else:
+            raise ValueError("start and end fields must both be None or datetime objects")
+            
+        # if ticker is not none, will filter for ticker
+        if ticker:
+            agg_query.append({"$match": {"symbols": ticker}})
+        
+        agg_query += [{"$facet": {
+                        "TrueNeg": [
+                            {"$match": {"label": "Bearish"}},
+                            {"$match": {"prediction": "Bearish"}},
+                            {"$count": "count"}
+                            ],
+                        "TruePos":[
+                            {"$match": {"label": "Bullish"}},
+                            {"$match": {"prediction": "Bullish"}},
+                            {"$count": "count"}
+                        ],
+                        "FalseNeg":[
+                            {"$match": {"label": "Bearish"}},
+                            {"$match": {"prediction": "Bullish"}},
+                            {"$count": "count"}
+                        ],
+                        "FalsePos":[
+                            {"$match": {"label": "Bullish"}},
+                            {"$match": {"prediction": "Bearish"}},
+                            {"$count": "count"}
+                        ]}
+                    },
+                    { "$project": {
+                        "accuracy": {"$divide": [
+                            {"$sum": [
+                                {"$arrayElemAt": ["$TrueNeg.count", 0]},
+                                {"$arrayElemAt": ["$TruePos.count", 0]}
+                            ]}, 
+                            {"$sum": [
+                                {"$arrayElemAt": ["$TrueNeg.count", 0]},
+                                {"$arrayElemAt": ["$TruePos.count", 0]},
+                                {"$arrayElemAt": ["$FalseNeg.count", 0]}, 
+                                {"$arrayElemAt": ["$FalsePos.count", 0]},
+                                0.001]}
+                        ]}
+                    }}
+                ]
+        result = self.db.twits.aggregate(agg_query)
+        return list(result)[0]["accuracy"]
+
     def run(self):
         while True:
             for ticker in self.tickers:
