@@ -35,9 +35,13 @@ class BertFineTuned(nn.Module):
         """
         super().__init__()
         self.bert = BertModel.from_pretrained("bert-base-uncased")
+        for param in self.bert.parameters():
+            param.requires_grad = False
         self.pooler = Pooler(hiddenStates, poolFunc)
         self.dense = nn.Linear(hiddenStates, out_dim)
-        self.trainable = [*self.pooler.parameters(), *self.dense.parameters()]
+
+    def trainable(self):
+        return [*self.pooler.parameters(), *self.dense.parameters()]
 
     def forward(self, x):
         x = self.bert(x)
