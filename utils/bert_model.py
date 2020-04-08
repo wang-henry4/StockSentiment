@@ -86,10 +86,10 @@ class toTensor:
     def __call__(self, sample):
         text = sample["text"]
         label = sample["label"]
-        
-        
-        return {"text": torch.tensor(text),
-                "label": torch.tensor(label)}
+        tensors = {"text": torch.tensor(text),
+                   "label": torch.tensor(label)}
+
+        return tensors
 
 def get_dataset(json_path, max_length=128, token_vocab="bert-base-uncased"):
     """

@@ -1,4 +1,4 @@
-*.ipynb
+#*.ipynb
 .vscode
 __pycache__
 devenv/
