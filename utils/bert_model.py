@@ -22,7 +22,7 @@ class Pooler(nn.Module):
     def forward(self, hiddenStates):
         firstToken = self.poolFunc(hiddenStates)
         pooled_out = self.dense(firstToken)
-        pooled_out = self.activation(pooled_out)
+        #pooled_out = self.activation(pooled_out)
         return pooled_out
     
 class BertFineTuned(nn.Module):
@@ -37,15 +37,18 @@ class BertFineTuned(nn.Module):
         self.bert = BertModel.from_pretrained("bert-base-uncased")
         for param in self.bert.parameters():
             param.requires_grad = False
-        self.pooler = Pooler(hiddenStates, poolFunc)
+        #self.pooler = Pooler(hiddenStates, poolFunc)
         self.dense = nn.Linear(hiddenStates, out_dim)
+        self.pool_func = poolFunc
+        self.normalize = nn.BatchNorm1d()
 
     def trainable(self):
-        return [*self.pooler.parameters(), *self.dense.parameters()]
+        return [*self.dense.parameters()]
 
     def forward(self, x):
-        x = self.bert(x)
-        x = self.pooler(x[0])
+        x = self.bert(x)[0]
+        x = self.pool_func(x)
+        x = self.dropout(x)
         x = self.dense(x)
         x = F.softmax(x, dim=1)
         return x

@@ -68,11 +68,11 @@ class Avg_calc:
             "time": end,
             "MovingAvg": ratio
         }
-        res = collection.update({"time": end},
+        res = collection.update_one({"time": end},
                                 {"$set": new_doc},
                                 upsert=True)
         msg = f"Moving Average: {ratio:.3f} for ${ticker} recorded at {end:%Y-%m-%d %H:%M} UTC"
-        if res["updatedExisting"]:
+        if res.upserted_id is not None:
             msg += ", overwrote existing"
         self.logger.info(msg)
 

@@ -9,7 +9,7 @@ from utils.database import get_db, config
 from transformers import pipeline
 from itertools import cycle
 class ST_crawler:
-    def __init__ (self, tickers, img_dir=None):
+    def __init__ (self, tickers, dl_imgs=False, img_dir=None):
         self.url = "https://api.stocktwits.com/api/2/streams/symbol/{}.json"
         self.db = get_db()
 
@@ -25,6 +25,7 @@ class ST_crawler:
         # Logger object
         self.logger = get_loggers(__name__, "logs/crawler.log")
 
+        self.dl_img = dl_imgs
         self.img_dir = img_dir
 
     def get_tweets(self, ticker):
@@ -74,7 +75,8 @@ class ST_crawler:
         imgurl = ""
         if "chart" in msg["entities"]:
             imgurl = msg["entities"]["chart"]["large"]
-            self.save_img(imgurl, msg["id"])
+            if self.dl_img:
+                self.save_img(imgurl, msg["id"])
         imgflag = (imgurl != "")
         
         pred_label, prob = self.apply_nlp(text)
@@ -138,5 +140,5 @@ class ST_crawler:
             sleep(wait)
 
 if __name__ == "__main__":
-    app = ST_crawler(config["tickers"], config["img_dir"])
+    app = ST_crawler(config["tickers"], img_dir=config["img_dir"])
     app.crawl()

@@ -3,23 +3,19 @@ from flask_restful import Resource, Api
 from utils.database import get_db
 
 
-
 app = Flask(__name__)
 api = Api(app)
 db = get_db()
 
-
 class Averages(Resource):
     def get(self, ticker):
         collection = db.get_collection(f"averages.{ticker}")
-        collection.find_one
-        return {'hello': 'world'}
+        result = collection.find().sort("time", -1).limit(1)[0]
+        return {"time": str(result["time"]), 
+                "avg": str(result["MovingAvg"])}
 
 
-
-
-
-api.add_resource(Averages, '/')
+api.add_resource(Averages, '/averages/<string:ticker>')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0")
