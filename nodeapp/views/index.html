@@ -25,19 +25,11 @@
     let bos = <%= B %>;
 
     let massPopChart = new Chart(myChart, {
-      type:'bar', // bar, horizontalBar, pie, line, doughnut, radar, polarArea
+      type:'line', // bar, horizontalBar, pie, line, doughnut, radar, polarArea
       data:{
-        labels:['Boston', 'Worcester', 'Springfield', 'Lowell', 'Cambridge', 'New Bedford'],
+        labels:['00:00', '00:02', '00:04', '00:06', '00:08', '00:10'],
         datasets:[{
-          label:'Population',
-          data:[
-            50,
-            50,
-            50,
-            50,
-            50,
-            50
-          ],
+          data:[50,50,50,50,50,50], 
           //backgroundColor:'green',
           backgroundColor:[
             'rgba(255, 99, 132, 0.6)',
@@ -57,7 +49,7 @@
       options:{
         title:{
           display:true,
-          text:'Largest Cities In Massachusetts',
+          text:'SPY Sentiments',
           fontSize:25
         },
         legend:{
@@ -81,6 +73,8 @@
       }
     });
 
+
+/*
     $(document).ready(function() {
       
       $.get("http://192.168.1.15:5000/",  function(data, status){
@@ -90,9 +84,9 @@
         addData(massPopChart,"qwerrqwe", parseInt(data['hello']));
       });
     });
+*/
 
-
-    setInterval(function(){ alert("Hello"); }, 5000);
+    //setInterval(function(){ alert("Hello"); }, 5000);
     
     function addData(chart, label, data){
         chart.data.labels.push(label);
